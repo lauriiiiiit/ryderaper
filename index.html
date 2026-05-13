@@ -1430,45 +1430,10 @@ function doDisconnect(){
   if(_Jw){setBattery(null);show("sec-connect");}
 }
 
-function _onDisc(e) {
-  clearInterval(_Si); _Bw=_Bn=null;
-
-  // Detect detailed error reason
-  const reason = detectError(e);
-
-  // Show detailed disconnection reason
-  toast("Scooter disconnected: " + reason, "err");
-
-  if(_Jw){ setBattery(null); show("sec-connect"); }
-}
-
-// The detectError function
-function detectError(e) {
-  const msg = (e && e.message) ? e.message.toLowerCase() : "";
-  const timeSinceStart = Date.now() - _connectStartTime;
-
-  // Bluetooth permission / pairing issues
-  if (msg.includes("user cancelled") || msg.includes("not allowed")) {
-    return "Bluetooth permission denied or cancelled";
-  }
-
-  // Device not found / range issues
-  if (msg.includes("network") || msg.includes("not found")) {
-    return "Scooter not in range or turned off";
-  }
-
-  // GATT failures
-  if (msg.includes("gatt")) {
-    return "GATT connection failed (firmware or signal issue)";
-  }
-
-  // Timeout-style failures
-  if (timeSinceStart < 3000) {
-    return "Connection failed (device not responding)";
-  }
-
-  // Default fallback
-  return "Scooter connection error: " + (e.message || "unknown");
+function _onDisc(e) {  clearInterval(_Si);  _Bw = _Bn = null;
+  // Get a detailed reason if available  const reason = (typeof detectError === 'function') ? detectError(e) : (e && e.message ? e.message : "unknown");
+  // Show the user-friendly message  toast("Scooter disconnected: " + reason, "err");
+  if (_Jw) {    setBattery(null);    show("sec-connect");  }}
 }
 }
 

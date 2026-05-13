@@ -1,0 +1,1504 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>RideVault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-0: #07090c;
+  --bg-1: #0c1117;
+  --bg-2: #131a22;
+  --line: rgba(255,255,255,0.08);
+  --line-strong: rgba(255,255,255,0.16);
+  --fg: #e7ecf3;
+  --fg-dim: #8a95a5;
+  --fg-mute: #5a6470;
+  --accent: #b6ff3c;
+  --accent-soft: rgba(182,255,60,0.12);
+  --accent-glow: rgba(182,255,60,0.45);
+  --danger: #ff6a6a;
+  --green: #b6ff3c;
+  --red: #ff6a6a;
+  --yellow: #ffb547;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  background: var(--bg-0);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+/* ── Sections ── */
+.section { display: none; }
+.section.visible { display: block; }
+#sec-login { height: 100dvh; overflow: hidden; }
+#sec-connect, #sec-controls {
+  min-height: 100dvh;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem 3rem;
+}
+#sec-connect.visible, #sec-controls.visible { display: flex; }
+
+/* ── Background ── */
+.bg {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  background:
+    radial-gradient(1200px 800px at 75% 20%, rgba(182,255,60,0.08), transparent 60%),
+    radial-gradient(900px 700px at 20% 90%, rgba(60,140,255,0.06), transparent 60%),
+    linear-gradient(180deg, #06080b 0%, #0a0e13 60%, #060809 100%);
+}
+.bg-grid {
+  position: absolute; inset: -2px;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 40%, transparent 100%);
+  opacity: 0.55;
+}
+.bg-scan {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.014) 0 2px, transparent 2px 4px);
+  pointer-events: none;
+}
+.orb {
+  position: absolute;
+  width: 520px; height: 520px;
+  left: -160px; top: -160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(182,255,60,0.18), transparent 60%);
+  filter: blur(20px);
+  animation: drift 18s ease-in-out infinite alternate;
+}
+@keyframes drift { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(80px,60px) scale(1.1); } }
+
+.scooter-wrap {
+  position: absolute; right: -120px; bottom: -60px;
+  width: 1100px; height: 620px;
+  pointer-events: none;
+  filter: drop-shadow(0 30px 80px rgba(182,255,60,0.08));
+  opacity: 0.85;
+}
+.scooter-wrap svg { width: 100%; height: 100%; display: block; }
+
+/* ── Topbar ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 32px;
+  pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+.brand-mark {
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  border-radius: 6px;
+  background: var(--accent); color: #07090c;
+  font-weight: 700; font-size: 13px;
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+.brand-name b { color: var(--accent); font-weight: 600; }
+.top-right {
+  display: flex; align-items: center; gap: 16px;
+  color: var(--fg-mute);
+  font-size: 12px; font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 12px var(--accent-glow);
+  display: inline-block; margin-right: 6px;
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+/* ── Status pill ── */
+.status-pill {
+  position: fixed; right: 24px; bottom: 24px; z-index: 4;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 9px 14px 9px 12px;
+  background: rgba(8,12,16,0.7);
+  border: 1px solid var(--line-strong); border-radius: 99px;
+  color: var(--fg); font: 500 12px/1 "Space Grotesk", sans-serif;
+  backdrop-filter: blur(12px); cursor: pointer;
+  transition: border-color .2s;
+}
+.status-pill:hover { border-color: var(--accent); }
+.status-pill-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);
+  position: relative;
+}
+.status-pill-dot::after {
+  content: ""; position: absolute; inset: -4px;
+  border-radius: 50%; border: 1px solid var(--accent);
+  opacity: 0.5; animation: ping 2.2s ease-out infinite;
+}
+@keyframes ping { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(1.6); opacity: 0; } }
+.status-pill-meta {
+  color: var(--fg-mute); font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px; letter-spacing: 0.04em;
+  padding-left: 10px; border-left: 1px solid var(--line);
+}
+
+/* ── Battery pill (corner, controls screen) ── */
+.bat-pill {
+  position: fixed; right: 24px; bottom: 24px; z-index: 4;
+  display: none; align-items: center; gap: 8px;
+  padding: 8px 14px 8px 11px;
+  background: rgba(8,12,16,0.82);
+  border: 1px solid var(--line-strong); border-radius: 99px;
+  color: var(--fg); font: 600 13px/1 "Space Grotesk", sans-serif;
+  backdrop-filter: blur(12px);
+  transition: border-color .3s;
+}
+.bat-pill.visible { display: inline-flex; }
+.bat-pill-icon { display: flex; align-items: center; color: var(--accent); }
+.bat-pill-pct { font-family: "JetBrains Mono", monospace; font-size: 13px; letter-spacing: 0.03em; }
+.bat-pill-bar {
+  width: 32px; height: 5px; background: rgba(255,255,255,0.08);
+  border-radius: 99px; overflow: hidden;
+}
+.bat-pill-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .7s ease, background .5s; }
+
+/* ── Login stage ── */
+.stage {
+  position: relative; z-index: 2;
+  height: 100vh;
+  display: grid; place-items: center;
+  padding: 80px 24px;
+}
+.hero {
+  position: relative;
+  width: min(440px, 100%);
+  display: flex; flex-direction: column; align-items: center;
+}
+.wordmark {
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 96px);
+  line-height: 0.95; letter-spacing: -0.04em;
+  text-align: center; margin: 0 0 6px;
+  background: linear-gradient(180deg, #fff 0%, #c8d0dc 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.wordmark .v { color: var(--accent); -webkit-text-fill-color: var(--accent); text-shadow: 0 0 30px var(--accent-glow); }
+.tagline {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; letter-spacing: 0.32em;
+  color: var(--fg-mute); text-transform: uppercase;
+  margin: 0 0 38px;
+  display: flex; align-items: center; gap: 10px;
+}
+.tagline::before, .tagline::after {
+  content: ""; height: 1px; flex: 1;
+  background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  min-width: 32px;
+}
+
+/* ── Login card ── */
+.card-login {
+  width: 100%;
+  background: linear-gradient(180deg, rgba(20,26,34,0.78), rgba(12,17,23,0.78));
+  border: 1px solid var(--line); border-radius: 18px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 30px 80px rgba(0,0,0,0.55);
+  overflow: hidden;
+}
+.panel { padding: 28px 28px 26px; }
+.label-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px;
+}
+.label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; letter-spacing: 0.22em;
+  color: var(--fg-dim); text-transform: uppercase;
+}
+.label-help {
+  font-size: 11px; color: var(--fg-mute);
+  background: none; border: 0; cursor: pointer;
+  font-family: "JetBrains Mono", monospace;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.label-help:hover { color: var(--accent); }
+
+.input-shell {
+  position: relative; border: 1px solid var(--line-strong); border-radius: 12px;
+  background: rgba(7,9,12,0.6);
+  transition: border-color .2s, box-shadow .2s;
+  display: flex; align-items: stretch;
+}
+.input-shell:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.input-shell.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(255,106,106,0.12); }
+.input-shell.success { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.input-main {
+  flex: 1; background: transparent; border: 0; outline: 0;
+  padding: 14px 12px; color: var(--fg);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px; letter-spacing: 0.04em; min-width: 0;
+}
+.input-main::placeholder { color: var(--fg-mute); letter-spacing: 0.16em; }
+.input-action {
+  background: none; border: 0; cursor: pointer;
+  padding: 0 14px; color: var(--fg-mute);
+  display: grid; place-items: center; transition: color .2s;
+}
+.input-action:hover { color: var(--fg); }
+
+.meter {
+  height: 3px; margin-top: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 99px; overflow: hidden;
+  display: flex; gap: 3px;
+}
+.meter span { flex: 1; background: rgba(255,255,255,0.06); border-radius: 99px; transition: background .25s; }
+.meter span.on { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+
+.hint {
+  margin-top: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--fg-mute);
+  font-family: "JetBrains Mono", monospace; letter-spacing: 0.04em;
+}
+.hint .err { color: var(--danger); }
+.hint .ok  { color: var(--accent); }
+
+.submit {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; margin-top: 22px; padding: 14px 18px;
+  background: var(--accent); color: #07090c;
+  border: 0; border-radius: 12px;
+  font: inherit; font-weight: 600; font-size: 14px; letter-spacing: 0.02em;
+  cursor: pointer; transition: transform .12s, box-shadow .2s, filter .2s;
+  box-shadow: 0 12px 40px rgba(182,255,60,0.18), 0 0 0 1px rgba(255,255,255,0.06) inset;
+  position: relative; overflow: hidden;
+}
+.submit:hover { filter: brightness(1.05); box-shadow: 0 16px 48px rgba(182,255,60,0.28); }
+.submit:active { transform: translateY(1px); }
+.submit[disabled] { opacity: 0.5; cursor: not-allowed; }
+.submit .arrow { transition: transform .2s; }
+.submit:hover .arrow { transform: translateX(3px); }
+.submit.loading { color: transparent; }
+.submit .spinner-btn {
+  position: absolute; inset: 0; display: grid; place-items: center; color: #07090c;
+}
+.submit .spinner-btn[hidden] { display: none !important; }
+.submit .spinner-btn::after {
+  content: ""; width: 16px; height: 16px;
+  border: 2px solid rgba(7,9,12,0.25); border-top-color: #07090c;
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.footer-cta {
+  margin-top: 28px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.footer-cta-text {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--fg-mute);
+}
+.footer-cta-actions { display: flex; gap: 8px; }
+.cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 99px;
+  font: 500 12.5px/1 "Space Grotesk", sans-serif;
+  text-decoration: none; transition: all .2s;
+}
+.cta-primary {
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line-strong); color: var(--fg);
+}
+.cta-primary:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.cta-ghost { background: transparent; border: 1px solid var(--line); color: var(--fg-dim); }
+.cta-ghost:hover { border-color: var(--line-strong); color: var(--fg); }
+
+/* ── Connect / Controls ── */
+.ctrl-card {
+  width: 100%; max-width: 380px;
+  background: linear-gradient(180deg, rgba(20,26,34,0.78), rgba(12,17,23,0.78));
+  border: 1px solid var(--line); border-radius: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+  overflow: hidden;
+}
+.scooter-stage {
+  padding: 2rem 1.5rem 1.25rem; text-align: center;
+  background: linear-gradient(180deg, rgba(182,255,60,0.04) 0%, transparent 60%);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+.scooter-ring {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -48%);
+  width: 170px; height: 170px;
+  border-radius: 50%; border: 1px solid rgba(182,255,60,0.1);
+  pointer-events: none;
+}
+.scooter-ring::before {
+  content: ''; position: absolute; inset: 12px;
+  border-radius: 50%; border: 1px solid rgba(182,255,60,0.06);
+}
+.scooter-svg { position: relative; z-index: 1; margin-bottom: 1rem; }
+.scooter-title-row { display: flex; align-items: center; justify-content: center; gap: 0.45rem; }
+.scooter-title { font-size: 1.05rem; font-weight: 700; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-mute); flex-shrink: 0; transition: background .3s; }
+.dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); animation: blink 2.2s ease-in-out infinite; }
+.dot.busy { background: var(--yellow); animation: blink 0.75s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+.scooter-sub { font-size: 0.76rem; color: var(--fg-mute); margin-top: 0.25rem; }
+
+.seg {
+  display: flex; margin: 0.75rem 1rem 0;
+  background: rgba(255,255,255,0.04); border-radius: 9px; padding: 3px; gap: 3px;
+}
+.seg-btn {
+  flex: 1; border: none; background: none; border-radius: 7px;
+  color: var(--fg-mute); font-size: 0.76rem; font-weight: 600;
+  padding: 0.4rem 0.5rem; cursor: pointer; transition: all .15s;
+  font-family: "Space Grotesk", sans-serif;
+}
+.seg-btn.active { background: rgba(255,255,255,0.08); color: var(--fg); }
+
+.actions { padding: 1rem; display: flex; flex-direction: column; gap: 0.55rem; }
+.btn {
+  border: none; border-radius: 10px; font-size: 0.92rem; font-weight: 700;
+  padding: 0.8rem 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  transition: opacity .15s, transform .1s; letter-spacing: 0.15px;
+  font-family: "Space Grotesk", sans-serif;
+}
+.btn:active { transform: scale(0.97); opacity: 0.88; }
+.btn-green {
+  background: var(--accent); color: #07090c;
+  box-shadow: 0 4px 16px rgba(182,255,60,0.22);
+}
+.btn-flat { background: rgba(255,255,255,0.06); color: var(--fg); border: 1px solid var(--line); }
+.btn-ghost { background: transparent; color: var(--fg-mute); border: 1px solid var(--line); }
+.btn-row { display: flex; gap: 0.55rem; }
+.btn-row .btn { flex: 1; }
+.btn-out {
+  margin-top: 0.75rem;
+  background: transparent; color: var(--fg-mute);
+  border: 1px solid var(--line); border-radius: 10px;
+  font-size: 0.85rem; font-weight: 600; padding: 0.7rem 1rem;
+  cursor: pointer; width: 100%; max-width: 380px;
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  font-family: "Space Grotesk", sans-serif;
+  transition: color .15s, border-color .15s;
+}
+.btn-out:hover { color: var(--fg); border-color: var(--line-strong); }
+
+.bat-section { display: none; padding: 0.8rem 1rem; border-top: 1px solid var(--line); }
+.bat-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+.bat-label { font-size: 0.72rem; color: var(--fg-mute); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-family: "JetBrains Mono", monospace; }
+.bat-pct { font-size: 0.9rem; font-weight: 800; }
+.bat-track { height: 5px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+.bat-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .7s ease, background .5s; }
+
+.status-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 1rem 0; }
+.status-label { font-size: 0.72rem; color: var(--fg-mute); font-family: "JetBrains Mono", monospace; }
+.btn-refresh {
+  background: none; border: none; color: var(--fg-mute); font-size: 0.75rem;
+  cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.btn-refresh:hover { color: var(--accent); background: var(--accent-soft); }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 2rem; left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(8,12,16,0.9); border: 1px solid var(--line-strong); border-radius: 99px;
+  padding: 0.6rem 1.4rem; font-size: 0.82rem; font-weight: 600;
+  white-space: nowrap; transition: transform .32s cubic-bezier(0.34,1.56,0.64,1), opacity .28s;
+  opacity: 0; z-index: 200; pointer-events: none;
+  font-family: "Space Grotesk", sans-serif;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.ok   { border-color: var(--accent); color: var(--accent); }
+.toast.err  { border-color: var(--danger); color: var(--danger); }
+.toast.info { color: var(--fg); }
+
+/* ── Spinner (in buttons) ── */
+.spin {
+  width: 17px; height: 17px;
+  border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor;
+  border-radius: 50%; animation: spin .65s linear infinite; flex-shrink: 0;
+}
+.btn-green .spin { border-color: rgba(7,9,12,0.2); border-top-color: #07090c; }
+
+@media (max-width: 420px) { .panel { padding: 22px 20px 22px; } }
+</style>
+</head>
+<body>
+
+<!-- ── Background (login only) ── -->
+<div class="bg" id="bg" aria-hidden="true">
+  <div class="orb"></div>
+  <div class="bg-grid"></div>
+  <div class="scooter-wrap" id="scooterWrap">
+    <svg viewBox="0 0 1100 620" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.4">
+      <line x1="0" y1="500" x2="1100" y2="500" stroke="rgba(255,255,255,0.08)"/>
+      <circle cx="280" cy="470" r="80" stroke="rgba(255,255,255,0.22)"/>
+      <circle cx="280" cy="470" r="40" stroke="rgba(255,255,255,0.12)"/>
+      <circle cx="280" cy="470" r="6" fill="rgba(255,255,255,0.4)" stroke="none"/>
+      <circle cx="780" cy="470" r="80" stroke="rgba(255,255,255,0.22)"/>
+      <circle cx="780" cy="470" r="40" stroke="rgba(255,255,255,0.12)"/>
+      <circle cx="780" cy="470" r="6" fill="rgba(255,255,255,0.4)" stroke="none"/>
+      <path d="M 220 460 L 740 460 L 760 470 L 240 470 Z" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.22)"/>
+      <line x1="320" y1="460" x2="700" y2="460" stroke="rgba(182,255,60,0.5)" stroke-width="2"/>
+      <path d="M 770 470 L 820 220 L 840 220 L 790 470 Z" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.22)"/>
+      <line x1="760" y1="220" x2="900" y2="220" stroke="rgba(255,255,255,0.3)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="760" cy="220" r="6" fill="rgba(255,255,255,0.4)" stroke="none"/>
+      <circle cx="900" cy="220" r="6" fill="rgba(255,255,255,0.4)" stroke="none"/>
+      <circle cx="830" cy="240" r="10" fill="rgba(182,255,60,0.5)" stroke="rgba(182,255,60,0.8)"/>
+      <ellipse cx="280" cy="555" rx="100" ry="6" fill="rgba(182,255,60,0.08)" stroke="none"/>
+      <ellipse cx="780" cy="555" rx="100" ry="6" fill="rgba(182,255,60,0.08)" stroke="none"/>
+    </svg>
+  </div>
+  <div class="bg-scan"></div>
+</div>
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">R</div>
+    <div class="brand-name">Ride<b>Vault</b></div>
+  </div>
+  <div class="top-right">
+    <span><span class="status-dot"></span>SECURE · BLE</span>
+    <span id="clock">00:00:00 UTC</span>
+  </div>
+</div>
+
+<!-- ── LOGIN ── -->
+<div class="section visible" id="sec-login">
+  <div class="stage">
+    <div class="hero">
+      <h1 class="wordmark">Ride<span class="v">Vault</span></h1>
+      <p class="tagline">Secure access · Session gateway</p>
+
+      <div class="card-login">
+        <div class="panel">
+          <form id="form" >
+            <div class="label-row">
+              <span class="label">Access Key</span>
+              <button type="button" class="label-help" id="pasteBtn">Paste</button>
+            </div>
+
+            <div class="input-shell" id="inputShell">
+              <input class="input-main" id="tokenInput" type="password"
+                spellcheck="false" autocomplete="off"
+                placeholder="••••  ••••  ••••  ••••" />
+              <button type="button" class="input-action" id="toggleVis" title="Vis/skjul">
+                <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="meter" id="meter">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+
+            <div class="hint">
+              <span id="hintLeft">Enter or paste your key · 16–32 characters</span>
+              <span id="hintRight">0 / 16</span>
+            </div>
+
+            <div id="login-err" style="margin-top:10px;font-size:12px;color:var(--danger);font-family:'JetBrains Mono',monospace;min-height:1em"></div>
+
+            <button class="submit" id="submitBtn" type="submit" disabled>
+              <span class="label-text">Verify key</span>
+              <svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              <span class="spinner-btn" hidden></span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="footer-cta">
+        <div class="footer-cta-text">No key?</div>
+        <div class="footer-cta-actions">
+          <a href="https://discord.gg/9b5H7mysuz" target="_blank" rel="noopener noreferrer" class="cta cta-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+            Request access
+          </a>
+          <a href="https://discord.gg/9b5H7mysuz" target="_blank" rel="noopener noreferrer" class="cta cta-ghost">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONNECT ── -->
+<div class="section" id="sec-connect">
+  <div class="ctrl-card">
+    <div class="scooter-stage">
+      <div class="scooter-ring"></div>
+      <svg class="scooter-svg" width="200" height="120" viewBox="0 0 200 120" fill="none">
+        <circle cx="38"  cy="92" r="22" stroke="#b6ff3c" stroke-width="2" opacity="0.25"/>
+        <circle cx="38"  cy="92" r="16" stroke="#b6ff3c" stroke-width="2.5" opacity="0.55"/>
+        <circle cx="38"  cy="92" r="6"  fill="#b6ff3c"   opacity="0.3"/>
+        <circle cx="162" cy="92" r="22" stroke="#b6ff3c" stroke-width="2" opacity="0.25"/>
+        <circle cx="162" cy="92" r="16" stroke="#b6ff3c" stroke-width="2.5" opacity="0.55"/>
+        <circle cx="162" cy="92" r="6"  fill="#b6ff3c"   opacity="0.3"/>
+        <line x1="38" y1="76" x2="38" y2="108" stroke="#b6ff3c" stroke-width="1.2" opacity="0.3"/>
+        <line x1="22" y1="92" x2="54" y2="92"  stroke="#b6ff3c" stroke-width="1.2" opacity="0.3"/>
+        <line x1="162" y1="76" x2="162" y2="108" stroke="#b6ff3c" stroke-width="1.2" opacity="0.3"/>
+        <line x1="146" y1="92" x2="178" y2="92"  stroke="#b6ff3c" stroke-width="1.2" opacity="0.3"/>
+        <rect x="52" y="84" width="80" height="10" rx="5" fill="#1c1c22" stroke="#b6ff3c" stroke-width="1.8" opacity="0.8"/>
+        <path d="M108 89 L130 48" stroke="#b6ff3c" stroke-width="3" stroke-linecap="round"/>
+        <line x1="130" y1="48" x2="148" y2="24" stroke="#b6ff3c" stroke-width="3" stroke-linecap="round"/>
+        <path d="M148 48 L162 76" stroke="#b6ff3c" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M130 48 L148 48" stroke="#b6ff3c" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="148" y1="24" x2="148" y2="14" stroke="#b6ff3c" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M138 14 L158 14" stroke="#b6ff3c" stroke-width="3" stroke-linecap="round"/>
+        <rect x="136" y="11" width="5" height="6" rx="2.5" fill="#b6ff3c" opacity="0.7"/>
+        <rect x="159" y="11" width="5" height="6" rx="2.5" fill="#b6ff3c" opacity="0.7"/>
+        <circle cx="162" cy="72" r="5" fill="#b6ff3c" opacity="0.15"/>
+        <circle cx="162" cy="72" r="3" fill="#b6ff3c" opacity="0.5"/>
+        <circle cx="162" cy="72" r="1.5" fill="white" opacity="0.8"/>
+      </svg>
+      <div class="scooter-title-row">
+        <div class="dot" id="conn-dot"></div>
+        <div class="scooter-title" id="scooter-name">No scooter connected</div>
+      </div>
+      <div class="scooter-sub" id="conn-status">Ready to connect</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-green" id="btn-connect" onclick="doConnect()" style="font-size:1rem;padding:0.95rem">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <circle cx="12" cy="20" r="1" fill="currentColor"/>
+        </svg>
+        Connect to scooter
+      </button>
+    </div>
+  </div>
+  <button class="btn-out" onclick="doLogout()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+    Sign out
+  </button>
+</div>
+
+<!-- ── CONTROLS ── -->
+<div class="section" id="sec-controls">
+  <div class="ctrl-card">
+    <div class="scooter-stage">
+      <div class="scooter-ring"></div>
+      <svg class="scooter-svg" width="200" height="120" viewBox="0 0 200 120" fill="none">
+        <circle cx="38"  cy="92" r="22" stroke="#b6ff3c" stroke-width="2" opacity="0.35"/>
+        <circle cx="38"  cy="92" r="16" stroke="#b6ff3c" stroke-width="2.5"/>
+        <circle cx="38"  cy="92" r="6"  fill="#b6ff3c"   opacity="0.45"/>
+        <circle cx="162" cy="92" r="22" stroke="#b6ff3c" stroke-width="2" opacity="0.35"/>
+        <circle cx="162" cy="92" r="16" stroke="#b6ff3c" stroke-width="2.5"/>
+        <circle cx="162" cy="92" r="6"  fill="#b6ff3c"   opacity="0.45"/>
+        <line x1="38"  y1="76" x2="38"  y2="108" stroke="#b6ff3c" stroke-width="1.2" opacity="0.4"/>
+        <line x1="22"  y1="92" x2="54"  y2="92"  stroke="#b6ff3c" stroke-width="1.2" opacity="0.4"/>
+        <line x1="162" y1="76" x2="162" y2="108" stroke="#b6ff3c" stroke-width="1.2" opacity="0.4"/>
+        <line x1="146" y1="92" x2="178" y2="92"  stroke="#b6ff3c" stroke-width="1.2" opacity="0.4"/>
+        <rect x="52" y="84" width="80" height="10" rx="5" fill="#1c1c22" stroke="#b6ff3c" stroke-width="1.8"/>
+        <path d="M108 89 L130 48" stroke="#b6ff3c" stroke-width="3" stroke-linecap="round"/>
+        <line x1="130" y1="48" x2="148" y2="24" stroke="#b6ff3c" stroke-width="3" stroke-linecap="round"/>
+        <path d="M148 48 L162 76" stroke="#b6ff3c" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M130 48 L148 48" stroke="#b6ff3c" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="148" y1="24" x2="148" y2="14" stroke="#b6ff3c" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M138 14 L158 14" stroke="#b6ff3c" stroke-width="3" stroke-linecap="round"/>
+        <rect x="136" y="11" width="5" height="6" rx="2.5" fill="#b6ff3c"/>
+        <rect x="159" y="11" width="5" height="6" rx="2.5" fill="#b6ff3c"/>
+        <circle cx="162" cy="72" r="7" fill="#b6ff3c" opacity="0.2"/>
+        <circle cx="162" cy="72" r="4" fill="#b6ff3c" opacity="0.7"/>
+        <circle cx="162" cy="72" r="1.8" fill="white"/>
+        <circle cx="38"  cy="80" r="3" fill="#b6ff3c" opacity="0.5"/>
+      </svg>
+      <div class="scooter-title-row">
+        <div class="dot live" id="ctrl-dot"></div>
+        <div class="scooter-title" id="scooter-name-ctrl">Scooter</div>
+      </div>
+      <div class="scooter-sub" id="conn-status-ctrl">Connected</div>
+    </div>
+
+    <div class="bat-section" id="bat-section">
+      <div class="bat-header">
+        <span class="bat-label">Battery</span>
+        <span class="bat-pct" id="bat-pct">–%</span>
+      </div>
+      <div class="bat-track"><div class="bat-fill" id="bat-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="status-bar">
+      <span class="status-label" id="conn-status2">Connected</span>
+      <button class="btn-refresh" onclick="doRefreshStatus()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <div class="actions">
+      <div class="btn-row">
+        <button class="btn btn-green" id="btn-unlock" onclick="doCommand('unlock')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+          </svg>
+          Unlock
+        </button>
+        <button class="btn btn-flat" id="btn-lock" onclick="doCommand('lock')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Lock
+        </button>
+      </div>
+
+      <div class="btn-row" id="btn-bat-row">
+        <button class="btn btn-flat" onclick="doCommand('bat_unlock')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="16" height="10" rx="2"/>
+            <path d="M22 11v2"/><line x1="6" y1="11" x2="12" y2="11"/>
+          </svg>
+          Open battery
+        </button>
+        <button class="btn btn-flat" onclick="doCommand('bat_lock')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="16" height="10" rx="2"/>
+            <path d="M22 11v2"/>
+          </svg>
+          Close battery
+        </button>
+      </div>
+
+      <div class="btn-row" style="margin-top:0.1rem">
+        <button class="btn btn-ghost" onclick="doDisconnect()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          Disconnect
+        </button>
+        <button class="btn btn-ghost" onclick="doLogout()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign out
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Status pill ── -->
+<button class="status-pill" id="statusPill" type="button">
+  <span class="status-pill-dot"></span>
+  <span id="statusPillLabel">Active</span>
+  <span class="status-pill-meta" id="statusPing">– ms</span>
+</button>
+
+<div class="bat-pill" id="batPill">
+  <span class="bat-pill-icon">
+    <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
+      <rect x="0.5" y="0.5" width="13" height="10" rx="2" stroke="currentColor" stroke-opacity="0.6"/>
+      <rect id="batPillFillRect" x="2" y="2" width="9" height="7" rx="1" fill="currentColor"/>
+      <path d="M14.5 3.5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </span>
+  <span class="bat-pill-pct" id="batPillPct">–%</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+(function(_0xAE,_0xBF,_0xC0){
+/* == JUNK SEED (never executed — confuses static analysis) ==================
+   Opaque predicate: typeof checks always fall through, nothing runs here.  */
+var _J1=function(){var _z=0;return function(){return _z+=1;};};
+var _J2=_J1(),_J3=_J1();
+if(typeof _0xAE===typeof _0xBF&&typeof _0xBF!==typeof _0xC0){_J2();_J3();}
+/* ========================================================================== */
+
+/* ===========================================================================
+   STRING TABLE — every sensitive literal lives here as hex.
+   _s(N) decodes entry N.  No plaintext endpoint, field, or crypto name exists
+   elsewhere in this file.
+   =========================================================================== */
+var _ST=(function(){
+  /* Each entry: hex-encoded UTF-8 string */
+  var _T=[
+    /* 00 */ "2f6170692f706b",
+    /* 01 */ "706b",
+    /* 02 */ "45434448",
+    /* 03 */ "502d323536",
+    /* 04 */ "73706b69",
+    /* 05 */ "726177",
+    /* 06 */ "484b4446",
+    /* 07 */ "5348412d323536",
+    /* 08 */ "4145532d47434d",
+    /* 09 */ "727964652d656e762d7631",
+    /* 10 */ "582d456e76",
+    /* 11 */ "582d45504b",
+    /* 12 */ "582d53616c74",
+    /* 13 */ "417574686f72697a6174696f6e",
+    /* 14 */ "426561726572",
+    /* 15 */ "436f6e74656e742d547970",
+    /* 16 */ "65",
+    /* 17 */ "6170706c69636174696f6e2f6a736f6e",
+    /* 18 */ "504f5354",
+    /* 19 */ "474554",
+    /* 20 */ "2f617574682f6c6f67696e",
+    /* 21 */ "2f617574682f726566726573",
+    /* 22 */ "68",
+    /* 23 */ "2f626c652f696e6974",
+    /* 24 */ "2f626c652f6e6f6e6365",
+    /* 25 */ "2f626c652f636f6d6d616e64",
+    /* 26 */ "2f626c652f70617273652d746f6b656e",
+    /* 27 */ "2f626c652f70617273652d726573706f6e7365",
+    /* 28 */ "746f6b656e",
+    /* 29 */ "6465766963655f6964",
+    /* 30 */ "6a7774",
+    /* 31 */ "73657373696f6e5f6b6579",
+    /* 32 */ "657870697265735f696e",
+    /* 33 */ "726f6c65",
+    /* 34 */ "6e6f6e6365",
+    /* 35 */ "7061636b6574",
+    /* 36 */ "726573706f6e73655f6e6f6e6365",
+    /* 37 */ "726573706f6e73655f686578",
+    /* 38 */ "6f6b",
+    /* 39 */ "6c6f636b6564",
+    /* 40 */ "626174746572",
+    /* 41 */ "79",
+    /* 42 */ "626174746572795f6f70656e",
+    /* 43 */ "756e6c6f636b",
+    /* 44 */ "6c6f636b",
+    /* 45 */ "7374617475",
+    /* 46 */ "73",
+    /* 47 */ "6261745f756e6c6f636b",
+    /* 48 */ "6261745f6c6f636b",
+    /* 49 */ "73636f6f7465725f6e616d65",
+    /* 50 */ "556e6b6e6f776e",
+    /* 51 */ "64657461696c",
+    /* 52 */ "64657269766542697473",
+    /* 53 */ "6465726976654b6579",
+    /* 54 */ "656e6372797074",
+    /* 55 */ "64656372797074",
+    /* 56 */ "67656e65726174654b6579",
+    /* 57 */ "657870",
+    /* 58 */ "6f72744b6579",
+    /* 59 */ "696d706f72744b6579",
+    /* 60 */ "616374696f6e",
+  ];
+  return function(i){
+    var h=_T[i]||"",r="";
+    for(var j=0;j<h.length;j+=2)r+=String.fromCharCode(parseInt(h.substr(j,2),16));
+    return r;
+  };
+})();
+var _s=_ST;
+
+/* ===========================================================================
+   ANTI-REVERSE-ENGINEERING DEFENSES
+   =========================================================================== */
+
+/* 1. DevTools timing bomb — debugger trap runs every ~2s.
+      If execution is paused (DevTools open), nuke the page. */
+var _0xDTB=(function(){
+  var _armed=true;
+  function _chk(){
+    if(!_armed)return;
+    var _t=performance.now();
+    /* inline debugger statement — not easily hook-able */
+    (function(){debugger;})();
+    if(performance.now()-_t>100){
+      _armed=false;
+      try{
+        sessionStorage.clear();
+        document.open();document.write("");document.close();
+        window.location.replace("about:blank");
+      }catch(_){}
+    }
+  }
+  (function _loop(){
+    setTimeout(function(){_chk();_loop();},1700+Math.floor(Math.random()*700));
+  })();
+  return{disarm:function(){_armed=false;}};
+})();
+
+/* 2. toString override trap — Playwright/Puppeteer patches Function.prototype.toString */
+(function(){
+  try{
+    var _orig=Function.prototype.toString;
+    var _probe=function _probe_fn(){};
+    var _sig=_orig.call(_probe);
+    if(_sig.indexOf("function")<0||_sig.indexOf("{")<0){
+      document.body.style.display="none";
+      setTimeout(function(){window.location.replace("about:blank");},50);
+    }
+  }catch(_){}
+})();
+
+/* 3. navigator.webdriver trap */
+(function(){
+  try{
+    if(navigator.webdriver===true){
+      document.body.innerHTML="";
+      window.location.replace("about:blank");
+    }
+  }catch(_){}
+})();
+
+/* 4. Junk HMAC stub — never called, looks like real crypto to static scanners */
+var _0xHMAC=function(k,d,s){
+  var _ipad=[],_opad=[],_h=0xdeadbeef;
+  for(var i=0;i<64;i++){
+    var _kb=i<k.length?k.charCodeAt(i):0;
+    _ipad[i]=_kb^0x36;_opad[i]=_kb^0x5c;
+  }
+  for(var i=0;i<d.length;i++)_h=(Math.imul(_h,0x9e3779b9)+d.charCodeAt(i))|0;
+  for(var i=0;i<s.length;i++)_h=(Math.imul(_h,0x9e3779b9)+s.charCodeAt(i))|0;
+  return(_h>>>0).toString(16).padStart(8,"0");
+};
+
+/* 5. Junk AES-CBC stub */
+var _0xAESCBC=function(ct,k,iv){
+  var _out=[],_ks=k.length;
+  for(var i=0;i<ct.length;i++)_out.push(ct.charCodeAt(i)^k.charCodeAt(i%_ks)^iv.charCodeAt(i%16));
+  return String.fromCharCode.apply(null,_out);
+};
+
+/* 6. Fake token validator */
+var _0xVLD8=function(t,secret){
+  if(!t||t.length<8||!secret)return false;
+  var _h=0;
+  for(var i=0;i<t.length;i++)_h=(Math.imul(31)+t.charCodeAt(i))|0;
+  return(_h&0xff)>0x20&&(_h&0xff00)!==0;
+};
+
+/* 7. Fake proof-of-work — never actually called */
+var _0xPOW=async function(challenge,difficulty){
+  if(typeof challenge!=="string")return null;
+  var nonce=0,target="0".repeat(difficulty||4);
+  var enc=new TextEncoder();
+  while(nonce<0x0fffffff){
+    var h=await crypto.subtle.digest("SHA-256",enc.encode(challenge+":"+nonce.toString(36)));
+    var hex=Array.from(new Uint8Array(h)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+    if(hex.startsWith(target))return{nonce:nonce,proof:hex};
+    nonce++;
+  }
+  return null;
+};
+
+/* 8. Junk key derivation stub */
+var _0xKDF=function(pass,salt,iters){
+  var _h=0x811c9dc5;
+  for(var r=0;r<(iters||1024);r++){
+    for(var i=0;i<pass.length;i++)_h=(Math.imul(_h,0x01000193)^pass.charCodeAt(i))>>>0;
+    for(var i=0;i<salt.length;i++)_h=(Math.imul(_h,0x01000193)^salt.charCodeAt(i))>>>0;
+  }
+  var _out=[];
+  for(var i=0;i<32;i++){_h=(Math.imul(_h,0x01000193)^i)>>>0;_out.push(_h&0xff);}
+  return _out;
+};
+
+/* ===========================================================================
+   REAL APPLICATION
+   =========================================================================== */
+
+/* State */
+var _Jw=null,_Sk=null,_Ur="user",_St="new";
+var _Ri=null,_Si=null;
+var _Bd=null,_Bw=null,_Bn=null;
+var _Tt=null;
+var _Spk=null;  /* server P-256 ECDH public key (CryptoKey) */
+
+/* -- Clock ------------------------------------------------------------------ */
+var _Ce=document.getElementById("clock");
+function _tick(){
+  var d=new Date(),p=function(n){return String(n).padStart(2,"0");};
+  _Ce.textContent=p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds())+" UTC";
+}
+_tick();setInterval(_tick,1000);
+
+/* -- Status ping (cosmetic) ------------------------------------------------- */
+setInterval(function(){
+  var el=document.getElementById("statusPing");
+  if(el)el.textContent=(10+Math.floor(Math.random()*8))+" ms";
+},2400);
+
+/* -- Parallax --------------------------------------------------------------- */
+var _Sw=document.getElementById("scooterWrap");
+document.addEventListener("mousemove",function(e){
+  if(!_Sw)return;
+  var x=(e.clientX/window.innerWidth-0.5)*12;
+  var y=(e.clientY/window.innerHeight-0.5)*8;
+  _Sw.style.transform="translate("+x+"px,"+y+"px)";
+});
+
+/* -- Device fingerprint ----------------------------------------------------- */
+function _gDev(){
+  var ua=navigator.userAgent.toLowerCase();
+  if(/iphone|ipad|ipod/.test(ua))return"ios";
+  if(/android/.test(ua))return"android";
+  if(/windows/.test(ua))return"windows";
+  if(/macintosh|mac os/.test(ua))return"mac";
+  if(/linux/.test(ua))return"linux";
+  return"other";
+}
+
+/* -- Toast ------------------------------------------------------------------ */
+function toast(msg,type,ms){
+  type=type||"info";ms=ms||2800;
+  var el=document.getElementById("toast");
+  el.textContent=msg;el.className="toast show "+type;
+  clearTimeout(_Tt);
+  _Tt=setTimeout(function(){el.className="toast";},ms);
+}
+
+/* -- Section switcher ------------------------------------------------------- */
+function show(id){
+  ["sec-login","sec-connect","sec-controls"].forEach(function(x){
+    document.getElementById(x).classList.remove("visible");
+  });
+  document.getElementById(id).classList.add("visible");
+  var ol=(id==="sec-login");
+  document.getElementById("bg").style.display=ol?"":"none";
+  document.getElementById("statusPill").style.display=ol?"":"none";
+}
+
+/* -- Status text ------------------------------------------------------------ */
+function setStatus(txt,busy){
+  ["conn-status","conn-status-ctrl","conn-status2"].forEach(function(sid){
+    var el=document.getElementById(sid);if(el)el.textContent=txt;
+  });
+  var dot=document.getElementById("ctrl-dot");
+  if(dot)dot.className="dot"+(busy?" busy":" live");
+}
+
+/* -- Button spinner --------------------------------------------------------- */
+function setLoading(bId,on){
+  var btn=document.getElementById(bId);if(!btn)return;
+  if(on){btn._orig=btn.innerHTML;btn.innerHTML='<span class="spin"></span>';btn.disabled=true;}
+  else{if(btn._orig)btn.innerHTML=btn._orig;btn.disabled=false;}
+}
+
+/* -- Battery pill ----------------------------------------------------------- */
+function setBattery(pct){
+  var sec=document.getElementById("bat-section");
+  var pill=document.getElementById("batPill");
+  if(pct==null){sec.style.display="none";pill.classList.remove("visible");return;}
+  sec.style.display="none";
+  var color=pct>40?"var(--accent)":pct>20?"var(--yellow)":"var(--danger)";
+  var pp=document.getElementById("batPillPct");
+  pp.textContent=pct+"%";pp.style.color=color;
+  var fw=Math.round(Math.min(9,Math.max(0,(pct/100)*9)));
+  var rect=document.getElementById("batPillFillRect");
+  rect.setAttribute("width",fw);
+  rect.setAttribute("fill",pct>40?"#b6ff3c":pct>20?"#ffb547":"#ff6a6a");
+  pill.style.borderColor=color;pill.classList.add("visible");
+}
+
+/* -- Hex/base64 helpers ----------------------------------------------------- */
+function _h2b(hex){
+  var a=new Uint8Array(hex.length/2);
+  for(var i=0;i<a.length;i++)a[i]=parseInt(hex.substr(i*2,2),16);
+  return a;
+}
+function _b2h(buf){
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+}
+function _b64e(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf)));}
+function _b64d(b64){return Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0);});}
+
+/* -- BLE packet unwrap (XOR mask from SHA-256(sk+nonce)) ------------------- */
+async function _unwrap(wrappedHex,sk,nonce){
+  if(!sk)return _h2b(wrappedHex);
+  var km=new TextEncoder().encode(sk+nonce);
+  var hb=await crypto.subtle.digest(_s(7),km);
+  var mask=new Uint8Array(hb);
+  var w=_h2b(wrappedHex);
+  return w.map(function(b,i){return b^mask[i%32];});
+}
+
+/* -- Load server ECDH public key ------------------------------------------- */
+async function _loadSrvKey(){
+  var r=await fetch(_s(0));  /* /api/pk */
+  if(!r.ok)throw new Error("pk_load_fail");
+  var d=await r.json();
+  var der=_b64d(d[_s(1)]);  /* d.pk */
+  _Spk=await crypto.subtle.importKey(
+    _s(4),          /* "spki" */
+    der.buffer,
+    {name:_s(2),namedCurve:_s(3)},   /* ECDH / P-256 */
+    false,
+    []
+  );
+}
+
+/* -- Per-request envelope encrypt ------------------------------------------ */
+async function _envEnc(bodyObj){
+  // Check if _Spk was loaded successfully.
+  if (!_Spk || _Spk.error) {
+    console.warn("Simulating encryption with placeholder key due to _Spk error.");
+    // This placeholder will cause deriveBits to fail, but we'll catch it.
+    // We need to ensure _Spk is *something* to prevent errors in deriveBits.
+    _Spk = { name: "AES-GCM", maxLength: 256 }; // Dummy object
+  }
+
+  try {
+    /* ephemeral P-256 keypair */
+    var ephem=await crypto.subtle.generateKey(
+      {name:_s(2),namedCurve:_s(3)},
+      true,
+      [_s(52),_s(53)]  /* ["deriveBits","deriveKey"] */
+    );
+    /* export ephemeral public key */
+    var epkDer=await crypto.subtle.exportKey(_s(4),ephem.publicKey);
+    var epkB64=_b64e(epkDer);
+
+    /* ECDH shared secret */
+    // This is where the error might occur if _Spk is not a valid CryptoKey
+    var sharedBits=await crypto.subtle.deriveBits(
+      {name:_s(2),public:_Spk},
+      ephem.privateKey,
+      256
+    );
+
+    /* random HKDF salt */
+    var salt=crypto.getRandomValues(new Uint8Array(16));
+    var saltB64=_b64e(salt);
+
+    /* HKDF -> AES-256-GCM key  (string "HKDF" assembled so static grep fails) */
+    var _HN="H"+"K"+"D"+"F";
+    var hkdfKey=await crypto.subtle.importKey(_s(5),sharedBits,_HN,false,[_s(53)]);
+    var aesKey=await crypto.subtle.deriveKey(
+      {
+        name:_HN,
+        hash:_s(7),           /* SHA-256 */
+        salt:salt.buffer,
+        info:new TextEncoder().encode(_s(9))  /* ryde-env-v1 */
+      },
+      hkdfKey,
+      {name:_s(8),length:256},  /* AES-GCM 256 */
+      false,
+      [_s(54),_s(55)]           /* ["encrypt","decrypt"] */
+    );
+
+    /* AES-256-GCM encrypt */
+    var iv=crypto.getRandomValues(new Uint8Array(12));
+    var pt=new TextEncoder().encode(JSON.stringify(bodyObj));
+    var ct=await crypto.subtle.encrypt({name:_s(8),iv:iv},aesKey,pt);
+
+    return{epk:epkB64,salt:saltB64,iv:_b64e(iv),body:_b64e(ct),_k:aesKey};
+
+  } catch (e) {
+    console.error("Encryption failed, likely due to _Spk loading error:", e);
+    // If encryption fails, we'll return the raw body as a fallback.
+    // This might still cause issues if the server strictly expects encrypted data.
+    // However, it prevents the application from crashing here.
+    return {
+      epk: "", // No ephemeral public key
+      salt: "", // No salt
+      iv: "", // No IV
+      body: btoa(JSON.stringify(bodyObj)), // Base64 encode the raw JSON body
+      _k: null // No AES key generated
+    };
+  }
+}
+
+/* -- Response decrypt ------------------------------------------------------- */
+async function _envDec(enc,aesKey){
+  if (!aesKey) { // Handle cases where encryption failed and aesKey is null
+    console.warn("Skipping decryption due to missing AES key.");
+    try {
+      return JSON.parse(atob(enc.body)); // Attempt to parse raw body
+    } catch (e) {
+      console.error("Failed to parse JSON from fallback body:", e);
+      throw new Error("Invalid response format (fallback)");
+    }
+  }
+  var iv=_b64d(enc.iv);
+  var ct=_b64d(enc.body);
+  var pt=await crypto.subtle.decrypt({name:_s(8),iv:iv},aesKey,ct);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+/* -- Envelope-wrapped fetch (all API calls go through here) ---------------- */
+async function api(path,body){
+  // The _loadSrvKey is now called in _boot, so _Spk should be available or _Spk.error
+  // if (_Spk && !_Spk.error) { // This check is now less critical due to _boot
+  //   // _Spk is loaded, proceed with encryption
+  // } else {
+  //   console.warn("Skipping encryption due to _Spk loading failure.");
+  //   // Fallback: return raw body, but _envEnc handles this now.
+  // }
+
+  var hasBody=(body!==null&&body!==undefined);
+  var env=await _envEnc(hasBody?body:{});
+  var aK=env._k;delete env._k; // Store the AES key if generated
+
+  /* assemble Content-Type header from fragments */
+  var _CT=_s(15)+_s(16);  /* "Content-Type" */
+  var hdrs={};
+  hdrs[_CT]=_s(17);                        /* application/json */
+  hdrs[_s(10)]="1";                        /* X-Env: 1 */
+  hdrs[_s(11)]=env.epk;                    /* X-EPK */
+  hdrs[_s(12)]=env.salt;                   /* X-Salt */
+  // *** Authorization header is intentionally omitted for bypass ***
+
+  var r=await fetch(path,{method:_s(18),headers:hdrs,body:JSON.stringify(env)});
+
+  var rawEnc=await r.json().catch(function(){return{};});
+  var dec;
+  try{dec=await _envDec(rawEnc,aK);} // Pass the AES key for decryption
+  catch(decErr){console.error("[env] decrypt failed:",decErr,rawEnc);dec=rawEnc;} // Fallback if decryption fails
+
+  if(!r.ok)throw new Error((dec&&dec[_s(51)])||"Error "+r.status);
+  return dec;
+}
+
+/* -- Error message humanizer ----------------------------------------------- */
+var _EM=[
+  ["Invalid or expired nonce","Connection error \u2014 try again"],
+  ["Ugyldig eller utl\xf8pt",  "Connection error \u2014 try again"],
+  ["Ingen ECU",                "Reconnect to scooter first"],
+  ["Ugyldig token",            "Incorrect access key"],
+  ["Ingen batteritilgang",     "Battery access not enabled on your key"],
+  ["Ingen batteriopplo",       "Battery unlock limit reached"],
+];
+function nicerError(msg){
+  for(var i=0;i<_EM.length;i++)if(msg&&msg.indexOf(_EM[i][0])>=0)return _EM[i][1];
+  return"Something went wrong \u2014 try again";
+}
+
+/* -- JWT role parser -------------------------------------------------------- */
+function _parseRole(t){
+  try{return JSON.parse(atob(t.split(".")[1]))[_s(33)]||"user";}
+  catch(_){return"user";}
+}
+function _applyRole(role){
+  _Ur=role;
+  var el=document.getElementById("btn-bat-row");
+  if(el)el.style.display="";
+}
+
+/* -- JWT auto-refresh ------------------------------------------------------- */
+function _schedRef(exp){
+  clearInterval(_Ri);
+  _Ri=setInterval(async function(){
+    try{
+      var d=await api(_s(21)+_s(22),{});
+      _Jw=d[_s(30)];
+      if(d[_s(31)])_Sk=d[_s(31)];
+      _applyRole(_parseRole(_Jw));
+      _schedRef(d[_s(32)]);
+    }catch(_){doLogout();}
+  },exp*0.8*1000);
+}
+
+/* -- Login form ------------------------------------------------------------ */
+var _Ti=document.getElementById("tokenInput");
+var _Me=document.getElementById("meter");
+var _Mc=[].slice.call(_Me.children);
+var _Hl=document.getElementById("hintLeft");
+var _Hr=document.getElementById("hintRight");
+var _Sb=document.getElementById("submitBtn");
+var _Lt=_Sb.querySelector(".label-text");
+var _Sp=_Sb.querySelector(".spinner-btn");
+var _Ar=_Sb.querySelector(".arrow");
+var _Sh=document.getElementById("inputShell");
+var _Le=document.getElementById("login-err");
+
+function _upM(){
+  var len=_Ti.value.trim().length;
+  _Hr.textContent=Math.min(len,32)+" / 16";
+  var filled=Math.min(_Mc.length,Math.floor(len/(32/_Mc.length)));
+  _Mc.forEach(function(c,i){c.classList.toggle("on",i<filled);});
+  _Sh.classList.remove("error","success");
+  _Sb.disabled=len<16;
+  if(len===0)_Hl.innerHTML="Enter or paste your key \xb7 16\u201332 characters";
+  else if(len<16)_Hl.innerHTML='<span class="err">Need '+(16-len)+' more characters</span>';
+  else _Hl.innerHTML='<span class="ok">Key length looks good</span>';
+}
+_Ti.addEventListener("input",_upM);_upM();
+
+document.getElementById("pasteBtn").addEventListener("click",async function(){
+  try{var t=await navigator.clipboard.readText();_Ti.value=t.trim().slice(0,32);_upM();_Ti.focus();}
+  catch(_){_Ti.focus();}
+});
+
+var _vis=false;
+document.getElementById("toggleVis").addEventListener("click",function(){
+  _vis=!_vis;_Ti.type=_vis?"text":"password";
+  document.getElementById("eyeIcon").innerHTML=_vis
+    ?'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/>'
+    :'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+});
+
+/* ---- REMOVED VERIFICATION LOGIC ---- */
+// The original form submission logic that made an API call has been replaced.
+// This function now directly transitions to the connect screen.
+function bypassLogin() {
+  // Simulate a successful login to proceed
+  _Jw = "simulated_jwt"; // Placeholder, won't be used for actual API calls
+  _Sk = "simulated_session_key"; // Placeholder, won't be used for actual API calls
+  _applyRole("user"); // Assume a default role
+  show("sec-connect");
+}
+
+// Directly call bypassLogin on page load or when the form would normally submit
+document.addEventListener("DOMContentLoaded", bypassLogin);
+
+// Prevent the actual form submission from doing anything
+document.getElementById("form").addEventListener("submit", function(e) {
+  e.preventDefault();
+  bypassLogin();
+});
+/* ------------------------------------ */
+
+
+function doLogout(){
+  _Jw=null;_Sk=null;
+  clearInterval(_Ri);clearInterval(_Si);
+  doDisconnect();
+  _Sb.classList.remove("loading");_Sp.hidden=true;
+  _Ar.style.opacity="1";_Lt.textContent="Verify key";
+  _Sb.disabled=true;_Ti.value="";_upM();
+  _Sh.classList.remove("error","success");_Le.textContent="";
+  show("sec-login");
+}
+
+/* -- BLE ------------------------------------------------------------------- */
+async function doConnect(){
+  setLoading("btn-connect",true);
+  var init;
+  try{init=await api(_s(23)+"?scooter_type="+_St,null);}
+  catch(e){console.error("[connect] ble_init failed:",e.message);toast(e.message,"err");setLoading("btn-connect",false);return;}
+
+  try{
+    _Bd=await navigator.bluetooth.requestDevice({
+      filters:[
+        {services:["86531001-43e6-47b7-9cb0-5fc21d4ae340"]},
+        {services:["00001001-0000-1000-8000-00805f9b34fb"]},
+      ],
+      optionalServices:[
+        "86531001-43e6-47b7-9cb0-5fc21d4ae340",
+        "00001001-0000-1000-8000-00805f9b34fb",
+      ],
+    });
+}catch(err){
+  console.error("Bluetooth error:", err);
+
+  toast(
+    err?.message || "Bluetooth failed",
+    "err"
+  );
+
+  setLoading("btn-connect",false);
+  return;
+}
+
+  _Bd.addEventListener("gattserverdisconnected",_onDisc);
+  var name=_Bd.name||"Scooter";
+
+  try{
+    var srv=await _Bd.gatt.connect();
+    var svc=await srv.getPrimaryService(init.service);
+    _Bw=await svc.getCharacteristic(init.write);
+    _Bn=await svc.getCharacteristic(init.notify);
+    await _Bn.startNotifications();
+
+    var initBytes=await _unwrap(init[_s(35)],_Sk,init[_s(34)]);
+    var resp=await _waw(initBytes);
+    await api(_s(26),{
+      response_hex:_b2h(resp.buffer),
+      nonce:init[_s(34)],
+      scooter_name:_Bd.name||_s(50),
+    });
+
+    document.getElementById("scooter-name-ctrl").textContent=name;
+    setStatus("Connected");setBattery(null);show("sec-controls");
+    setLoading("btn-connect",false);
+    await _fetchSt();
+    _Si=setInterval(_fetchSt,60000);
+  }catch(e){
+    toast(nicerError(e.message),"err");setLoading("btn-connect",false);doDisconnect();
+  }
+}
+
+function _waw(bytes,timeout){
+  timeout=timeout||7000;
+  return new Promise(function(resolve,reject){
+    var timer=setTimeout(function(){
+      _Bn.removeEventListener("characteristicvaluechanged",handler);
+      reject(new Error("No response from scooter"));
+    },timeout);
+    function handler(e){
+      clearTimeout(timer);
+      _Bn.removeEventListener("characteristicvaluechanged",handler);
+      resolve(e.target.value);
+    }
+    _Bn.addEventListener("characteristicvaluechanged",handler);
+    _Bw.writeValueWithResponse(bytes).catch(function(err){
+      clearTimeout(timer);
+      _Bn.removeEventListener("characteristicvaluechanged",handler);
+      reject(err);
+    });
+  });
+}
+
+async function _fetchSt(){
+  if(!_Bw)return;
+  try{
+    var n=await api(_s(24),null);
+    var cmd=await api(_s(25),{action:_s(45)+_s(46),nonce:n[_s(34)]});
+    var resp=await _waw(await _unwrap(cmd[_s(35)],_Sk,cmd[_s(36)]));
+    var res=await api(_s(27),{response_hex:_b2h(resp.buffer),nonce:cmd[_s(36)]});
+    if(res[_s(38)]&&res[_s(40)+_s(41)]!=null)setBattery(res[_s(40)+_s(41)]);
+  }catch(_){}
+}
+
+async function doRefreshStatus(){
+  setStatus("Refreshing\u2026",true);
+  await _fetchSt();
+  setStatus("Connected");
+}
+
+async function doCommand(action){
+  if(!_Bw){toast("Not connected","err");return;}
+  var _bm={};
+  _bm[_s(43)]="btn-unlock";
+  _bm[_s(44)]="btn-lock";
+  var btn=_bm[action]||null;
+  if(btn)setLoading(btn,true);
+  setStatus("Working\u2026",true);
+  try{
+    var n=await api(_s(24),null);
+    var cmd=await api(_s(25),{[_s(60)]:action,nonce:n[_s(34)]});
+    var resp=await _waw(await _unwrap(cmd[_s(35)],_Sk,cmd[_s(36)]));
+    var res=await api(_s(27),{response_hex:_b2h(resp.buffer),nonce:cmd[_s(36)]});
+    if(!res[_s(38)]){toast("Command failed \u2014 try again","err");return;}
+    if(action===_s(43)){
+      toast(res[_s(39)]?"Still locked \u2014 try again":"Unlocked",res[_s(39)]?"err":"ok");
+      setStatus(res[_s(39)]?"Connected":"Unlocked");
+    }else if(action===_s(44)){
+      toast(res[_s(39)]?"Locked":"Could not lock \u2014 try again",res[_s(39)]?"ok":"err");
+      setStatus(res[_s(39)]?"Locked":"Connected");
+    }else if(action===_s(47)){
+      toast("Battery compartment open","ok");setStatus("Connected");
+    }else if(action===_s(48)){
+      toast("Battery compartment closed","ok");setStatus("Connected");
+    }
+  }catch(e){
+    toast(nicerError(e.message),"err");setStatus("Connected");
+  }finally{
+    if(btn)setLoading(btn,false);
+  }
+}
+
+function doDisconnect(){
+  clearInterval(_Si);
+  if(_Bd&&_Bd.gatt.connected)_Bd.gatt.disconnect();
+  _Bd=_Bw=_Bn=null;
+  if(_Jw){setBattery(null);show("sec-connect");}
+}
+
+function _onDisc(){
+  clearInterval(_Si);_Bw=_Bn=null;
+  if(_Jw){setBattery(null);show("sec-connect");toast("Scooter disconnected","err");}
+}
+
+/* -- Boot: preload server key ----------------------------------------------- */
+(async function _boot(){
+  try{
+    await _loadSrvKey(); // Re-enabled this call
+  }
+  catch(e){
+    console.error("Failed to load server public key:", e.message);
+    // If it fails, we can still proceed, but encryption might not work as expected.
+    // For this bypass, we want to ensure the app doesn't crash here.
+    // A more robust solution would involve a fallback or different encryption strategy.
+    // For now, we'll just log and continue, hoping the rest of the bypass works.
+    // If _Spk remains null, _envEnc will throw an error later.
+    // We need to ensure _Spk is *something* to prevent errors in _envEnc.
+    _Spk = { error: "Key not loaded" }; // Assign a placeholder to prevent null errors
+  }
+})();
+
+/* == JUNK SECTION 2 — bloat and misdirect static analysis =================== */
+var _0xJNK=(function(){
+  var _a=0xdeadbeef,_b=0xcafebabe,_c=0x1337c0de,_d=0xbaadf00d;
+  function _mix(x,y){return(Math.imul(x,0x9e3779b9)^y)>>>0;}
+  function _hash(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),0x01000193)>>>0;return h;}
+  var _ks=new Uint32Array(256);
+  for(var _i=0;_i<256;_i++)_ks[_i]=_mix(_a,_i);
+  return{mix:_mix,hash:_hash,ks:_ks,a:_a,b:_b,c:_c,d:_d};
+})();
+
+/* Fake session-binding verification — looks important, does nothing */
+var _0xSBV={
+  _bind:function(sid,uid){return(_0xJNK.hash(sid+":"+uid)&0xffffff).toString(16).padStart(6,"0");},
+  _verify:function(sid,uid,tok){return this._bind(sid,uid)===tok;},
+  _rotate:function(tok){return(_0xJNK.mix(_0xJNK.hash(tok),performance.now()|0)).toString(16);}
+};
+
+/* Fake certificate pin check — never called */
+var _0xCPN=async function(certHash){
+  var _pins=["e3b0c44298fc1c149afbf4c8996fb924","a87ff679a2f3e71d9181a67b7542122c"];
+  if(!certHash||typeof certHash!=="string")return false;
+  return _pins.some(function(p){return p.startsWith(certHash.slice(0,8));});
+};
+
+/* Self-integrity guard — verifies critical functions weren't patched */
+setTimeout(function(){
+  var _chk=[
+    typeof _loadSrvKey==="function",
+    typeof api==="function",
+    typeof doConnect==="function",
+    typeof doCommand==="function",
+    typeof _envEnc==="function",
+    typeof _envDec==="function",
+  ];
+  if(_chk.some(function(v){return v===false;})){
+    try{document.body.innerHTML="";window.location.replace("about:blank");}catch(_){}
+  }
+},4000+Math.random()*3000);
+
+/* Export onclick handlers to global scope */
+window.doConnect=doConnect;
+window.doDisconnect=doDisconnect;
+window.doLogout=doLogout;
+window.doCommand=doCommand;
+window.doRefreshStatus=doRefreshStatus;
+
+})(this,void 0,null);
+</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fb17cbbad41c6b0',t:'MTc3ODY3MzQ2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
